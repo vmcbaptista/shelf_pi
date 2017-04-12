@@ -4,6 +4,12 @@ var httpServer = require('./servers/http'),
   resources = require('./resources/model');
 
 // Internal Plugins
+var luminosityPlugin = require('./plugins/internal/luminosityPlugin'); //#A
+var beaconsPlugin = require('./plugins/internal/beaconsPlugin'); //#A
+luminosityPlugin.start();
+beaconsPlugin.start();
+/*
+// Internal Plugins
 var ledsPlugin = require('./plugins/internal/ledsPlugin'), //#A
   pirPlugin = require('./plugins/internal/pirPlugin'), //#A
   dhtPlugin = require('./plugins/internal/DHT22SensorPlugin'); //#A
@@ -13,10 +19,10 @@ var ledsPlugin = require('./plugins/internal/ledsPlugin'), //#A
 pirPlugin.start({'simulate': true, 'frequency': 2000}); //#B
 ledsPlugin.start({'simulate': true, 'frequency': 10000}); //#B
 dhtPlugin.start({'simulate': true, 'frequency': 10000}); //#B
-
+*/
 // External Plugins
-var coapPlugin = require('./plugins/external/coapPlugin');
-coapPlugin.start({'simulate': false, 'frequency': 10000});
+//var coapPlugin = require('./plugins/external/coapPlugin');
+//coapPlugin.start({'simulate': true, 'frequency': 10000});
 
 // HTTP Server
 var server = httpServer.listen(resources.pi.port, function () {

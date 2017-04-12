@@ -1,42 +1,30 @@
 {
   "pi": {
-    "name": "WoT Pi",
-    "description": "A simple WoT-connected Raspberry PI for the WoT book.",
+    "name": "Shelf",
+    "description": "A shelf connected with Raspberry PI and Arduino using the WoT.",
     "port": 8484,
-    "sensors": {
-      "temperature": {
-        "name": "Temperature Sensor",
-        "description": "An ambient temperature sensor.",
-        "unit": "celsius",
-        "value": 0,
-        "gpio": 12
+    "sensors": {  
+      "luminosity": {
+        "name": "Luminosity Sensor",
+        "description": "A luminosity sensor inside the shelf.",
+        "value": 0
       },
-      "humidity": {
-        "name": "Humidity Sensor",
-        "description": "An ambient humidity sensor.",
-        "unit": "%",
+      "pressure": {
+        "name": "Pressure Sensor",
+        "description": "A pressure sensor above the shelf.",
         "value": 0,
-        "gpio": 12
+        "unit": "g"
       },
-      "pir": {
-        "name": "Passive Infrared",
-        "description": "A passive infrared sensor. When 'true' someone is present.",
-        "value": true,
-        "gpio": 17
-      }
-    },
-    "actuators": {
-      "leds": {
-        "1": {
-          "name": "LED 1",
-          "value": false,
-          "gpio": 4
-        },
-        "2": {
-          "name": "LED 2",
-          "value": false,
-          "gpio": 9
-        }
+      "weight": {
+        "name": "Weight Sensor",
+        "description": "A weight sensor above the shelf.",
+        "value": 0,
+        "unit": "g"
+      },
+      "beacons": {
+        "name": "Beacons Reader",
+        "description": "Use Pi Bluetooth to read beacons neraby.",
+        "value": "There is no beacons information right now"
       }
     }
   }

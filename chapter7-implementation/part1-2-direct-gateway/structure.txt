@@ -13,7 +13,6 @@ wot-pi
 │   ├── model.js
 │   └── resources.json
 ├── routes
-│   ├── actuators.js
 │   ├── sensors.js
 │   └── things.js
 ├── servers

@@ -1,6 +1,5 @@
 // Final version
 var express = require('express'),
-  actuatorsRoutes = require('./../routes/actuators'),
   sensorRoutes = require('./../routes/sensors'),
   thingsRoutes = require('./../routes/things'),
   resources = require('./../resources/model'),
@@ -14,7 +13,6 @@ app.use(bodyParser.json());
 
 app.use(cors());
 
-app.use('/pi/actuators', actuatorsRoutes);
 app.use('/pi/sensors', sensorRoutes);
 app.use('/things', thingsRoutes);
 

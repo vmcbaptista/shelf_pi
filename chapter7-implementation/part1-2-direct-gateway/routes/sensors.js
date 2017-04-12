@@ -8,19 +8,24 @@ router.route('/').get(function (req, res, next) {
   next(); //#B
 });
 
-router.route('/pir').get(function (req, res, next) {
-  req.result = resources.pi.sensors.pir;
+router.route('/luminosity').get(function (req, res, next) {
+  req.result = resources.pi.sensors.luminosity;
   next();
 });
 
-router.route('/temperature').get(function (req, res, next) {
-  req.result = resources.pi.sensors.temperature;
+router.route('/pressure').get(function (req, res, next) {
+  req.result = resources.pi.sensors.pressure;
   next();
 });
 
-router.route('/humidity').get(function (req, res, next) {
-  req.result = resources.pi.sensors.humidity;
+router.route('/weight').get(function (req, res, next) {
+  req.result = resources.pi.sensors.weight;
   next();
+});
+
+router.route('/beacons').get(function (req, res, next) {
+    req.result = resources.pi.sensors.beacons;
+    next();
 });
 
 module.exports = router;
