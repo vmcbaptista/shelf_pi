@@ -6,8 +6,11 @@ var httpServer = require('./servers/http'),
 // Internal Plugins
 var luminosityPlugin = require('./plugins/internal/luminosityPlugin'); //#A
 var beaconsPlugin = require('./plugins/internal/beaconsPlugin'); //#A
+var weightPlugin = require('./plugins/internal/weightPlugin'); //#A
+
 luminosityPlugin.start();
 beaconsPlugin.start();
+weightPlugin.start({'simulate': true, 'frequency': 1000});
 /*
 // Internal Plugins
 var ledsPlugin = require('./plugins/internal/ledsPlugin'), //#A

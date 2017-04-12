@@ -8,7 +8,7 @@ wot-pi
 │   └── internal
 │       ├── DHT22SensorPlugin.js
 │       ├── ledsPlugin.js
-│       └── pirPlugin.js
+│       └── weightPlugin.js
 ├── resources
 │   ├── model.js
 │   └── resources.json

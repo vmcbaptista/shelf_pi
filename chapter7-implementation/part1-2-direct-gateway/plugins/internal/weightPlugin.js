@@ -1,8 +1,11 @@
 var resources = require('./../../resources/model');
 
+SerialPort = require("serialport");
+
+
 var interval, sensor;
-var model = resources.pi.sensors.pir;
-var pluginName = resources.pi.sensors.pir.name;
+var model = resources.pi.sensors.weight;
+var pluginName = resources.pi.sensors.weight.name;
 var localParams = {'simulate': false, 'frequency': 2000};
 
 exports.start = function (params) { //#A
@@ -18,25 +21,27 @@ exports.stop = function () { //#A
   if (localParams.simulate) {
     clearInterval(interval);
   } else {
-    sensor.unexport();
+      portWeight.close();
   }
-  console.info('%s plugin stopped!', pluginName);
 };
 
 function connectHardware() { //#B
-  var Gpio = require('onoff').Gpio;
-  sensor = new Gpio(model.gpio, 'in', 'both'); //#C
-  sensor.watch(function (err, value) { //#D
-    if (err) exit(err);
-    model.value = !!value;
-    showValue();
-  });
-  console.info('Hardware %s sensor started!', pluginName);
+    var portWeight = new SerialPort("/dev/ttyACM0", {
+        baudRate: 9600
+    });
+    portWeight.on("open", function () {
+        portLight.on('data', function (data) {
+            if (parseInt(data)) {
+                model.value = parseInt(data);
+                showValue();
+            }
+        });
+    });
 };
 
 function simulate() { //#E
   interval = setInterval(function () {
-    model.value = !model.value;
+    model.value = Math.random() * 16000;
     showValue();
   }, localParams.frequency);
   console.info('Simulated %s sensor started!', pluginName);
