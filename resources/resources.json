@@ -2,6 +2,7 @@
   "pi": {
     "name": "Shelf",
     "description": "A shelf connected with Raspberry PI and Arduino using the WoT.",
+    "id": 0,
     "port": 8484,
     "sensors": {  
       "luminosity": {

@@ -1,7 +1,44 @@
 // Final version
 var httpServer = require('./servers/http'),
   wsServer = require('./servers/websockets'),
-  resources = require('./resources/model');
+  resources = require('./resources/model'),
+  http = require("http"),
+  os = require("os"),
+  // We need this to build our post string
+  querystring = require('querystring');
+
+// Register Device
+
+var post_data = {
+    "device_name": os.hostname()
+};
+
+var options = {
+    host: '1.1.1.239',
+    port: '8000',
+    path: '/api/device',
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+};
+
+// Set up the request
+var post_req = http.request(options, function(res) {
+    res.setEncoding('utf8');
+
+    var str;
+    //another chunk of data has been received, so append it to `str`
+    res.on('data', function (chunk) {
+        var result  = JSON.parse(chunk);
+        resources.pi.id = result.id;
+    });
+});
+
+// post the data
+post_req.write(querystring.stringify(post_data));
+post_req.end();
+
 
 // Internal Plugins
 var luminosityPlugin = require('./plugins/internal/luminosityPlugin'); //#A
@@ -9,8 +46,6 @@ var beaconsPlugin = require('./plugins/internal/beaconsPlugin'); //#A
 var weightPlugin = require('./plugins/internal/weightPlugin'); //#A
 
 luminosityPlugin.start();
-beaconsPlugin.start();
-weightPlugin.start({'simulate': true, 'frequency': 1000});
 /*
 // Internal Plugins
 var ledsPlugin = require('./plugins/internal/ledsPlugin'), //#A

@@ -16,8 +16,9 @@ app.use(cors());
 app.use('/pi/sensors', sensorRoutes);
 app.use('/things', thingsRoutes);
 
-app.get('/pi', function (req, res) {
-  res.send('This is the WoT-Pi!')
+app.get('/pi', function (req, res, next) {
+    req.result = resources.pi; //#A
+    next(); //#B
 });
 
 // For representation design

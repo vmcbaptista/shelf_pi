@@ -2,11 +2,14 @@
  * Created by vmcb on 12-04-2017.
  */
 var resources = require('./../../resources/model');
-var beaconsPlugin = require('./../../plugins/internal/beaconsPlugin')
+var weightPlugin = require('./../../plugins/internal/weightPlugin');
+var beaconsPlugin = require('./../../plugins/internal/beaconsPlugin');
 
 var interval, sensor;
 var model = resources.pi.sensors.luminosity;
 var pluginName = resources.pi.sensors.luminosity.name;
+
+var doorOpened = false;
 
 SerialPort = require("serialport");
 
@@ -21,8 +24,13 @@ exports.start = function (params) { //#A
                 model.value = parseInt(data);
                 showValue();
             }
+            if (String(data).match(/.*Opened.*/g)) {
+                weightPlugin.start({'simulate': true, 'frequency': 1000}); // When door is open start weight measure.
+                beaconsPlugin.start();
+            }
             if (String(data).match(/.*Closed.*/g)) {
-                beaconsPlugin.start(); // When door is closed start beacons search
+                weightPlugin.stop(); // When door is CLOSED stop weight measure.
+                setTimeout(beaconsPlugin.stop, 30000);
             }
         });
     });
