@@ -10,7 +10,7 @@ wot-pi
 │       ├── ledsPlugin.js
 │       └── weightPlugin.js
 ├── resources
-│   ├── model.js
+│   ├── configs.js
 │   └── resources.json
 ├── routes
 │   ├── sensors.js

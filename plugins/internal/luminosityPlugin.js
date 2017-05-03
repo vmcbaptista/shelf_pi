@@ -25,12 +25,15 @@ exports.start = function (params) { //#A
                 showValue();
             }
             if (String(data).match(/.*Opened.*/g)) {
-                weightPlugin.start({'simulate': true, 'frequency': 1000}); // When door is open start weight measure.
+                weightPlugin.start(); // When door is open start weight measure.
                 beaconsPlugin.start();
             }
             if (String(data).match(/.*Closed.*/g)) {
                 weightPlugin.stop(); // When door is CLOSED stop weight measure.
-                setTimeout(beaconsPlugin.stop, 30000);
+                if(beaconsPlugin.reading) {        
+                    setTimeout(beaconsPlugin.stop, 30000);        
+                    beaconsPlugin.reading = false;
+                }
             }
         });
     });

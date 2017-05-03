@@ -2,6 +2,7 @@
 var httpServer = require('./servers/http'),
   wsServer = require('./servers/websockets'),
   resources = require('./resources/model'),
+  configs = require('./configs/configs')
   http = require("http"),
   os = require("os"),
   // We need this to build our post string
@@ -14,8 +15,8 @@ var post_data = {
 };
 
 var options = {
-    host: '1.1.1.239',
-    port: '8000',
+    host: configs.server.ip,
+    port: configs.server.port,
     path: '/api/device',
     method: 'POST',
     headers: {
@@ -30,13 +31,14 @@ var post_req = http.request(options, function(res) {
     var str;
     //another chunk of data has been received, so append it to `str`
     res.on('data', function (chunk) {
+        console.log(chunk);
         var result  = JSON.parse(chunk);
         resources.pi.id = result.id;
     });
 });
 
 // post the data
-post_req.write(querystring.stringify(post_data));
+post_req.write(JSON.stringify(post_data));
 post_req.end();
 
 

@@ -30,9 +30,11 @@
     "coap": "^0.20.0",
     "cors": "^2.7.1",
     "express": "^4.12.4",
+    "median": "0.0.2",
     "msgpack5": "^3.3.0",
     "node-json2html": "^1.0.0",
     "serialport": "^4.0.7",
+    "sync-request": "^4.0.3",
     "ws": "^0.7.2"
   },
   "optionalDependencies": {

@@ -10,12 +10,6 @@
         "description": "A luminosity sensor inside the shelf.",
         "value": 0
       },
-      "pressure": {
-        "name": "Pressure Sensor",
-        "description": "A pressure sensor above the shelf.",
-        "value": 0,
-        "unit": "g"
-      },
       "weight": {
         "name": "Weight Sensor",
         "description": "A weight sensor above the shelf.",

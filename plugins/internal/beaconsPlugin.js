@@ -2,6 +2,7 @@
  * Created by vmcb on 12-04-2017.
  */
 var resources = require('./../../resources/model');
+var configs = require('./../../configs/configs');
 var Bleacon = require('bleacon');
 var http = require('http');
 // We need this to build our post string
@@ -15,27 +16,27 @@ var pluginName = resources.pi.sensors.beacons.name;
 var weightPlugin = require('./../../plugins/internal/weightPlugin');
 
 var actualBeacons = [];
-var reading = false;
+exports.reading = false;
 
 exports.start = function (params) { //#A
-    if (!reading) {
+    console.log("########################START##########################")
+    console.log(exports.reading)
+    if (!exports.reading) {
+        exports.reading = true;
         actualBeacons = [];
-        reading = true;
         console.info("Vou ler beacons");
         Bleacon.startScanning(); // scan for any bleacons
     }
 };
 
 exports.stop = function () { //#A
-    if (reading) {
+    console.log("########################STOP##########################")
+
         Bleacon.stopScanning();
-        weightPlugin.stop();
         model.value = actualBeacons;
-        console.log(actualBeacons);
         showValue();
         postBeaconData();
-        reading = false;
-    }
+    
 };
 
 Bleacon.on('discover', function (bleacon) {
@@ -51,13 +52,13 @@ Bleacon.on('discover', function (bleacon) {
             }
             if (!exists) {
                 console.info("New beacon");
+                console.info(weightPlugin.weightBuffer);
                 console.info(bleacon);
                 actualBeacons.push({
                     "uuid": bleacon.uuid,
                     "major": bleacon.major,
                     "minor": bleacon.minor,
-                    "distance": bleacon.accuracy,
-                    "total_weight": weightPlugin.weightBuffer.shift()
+                    "distance": bleacon.accuracy
                 });
             }
         }
@@ -69,15 +70,20 @@ function showValue() {
 }
 
 function postBeaconData() {
+    for (i = 0; i < actualBeacons.length; i++) {
+        if (checkIfBeaconIsNew(actualBeacons[i].uuid)) {
+            actualBeacons[i].weight = weightPlugin.weightBuffer.shift();
+        }
+    }
+
     var post_data = {
         "device_id": resources.pi.id,
-        "weight": weightPlugin.weightBuffer.shift(),
         "beacons": JSON.stringify(actualBeacons)
     };
     console.log(post_data);
     var options = {
-        host: '1.1.1.239',
-        port: '8000',
+        host: configs.server.ip,
+        port: configs.server.port,
         path: '/api/sensors/data',
         method: 'POST',
         headers: {
@@ -96,6 +102,28 @@ function postBeaconData() {
     post_req.write(JSON.stringify(post_data));
     post_req.end();
 }
+
+function checkIfBeaconIsNew(uuid) {
+    var options = {
+        host: configs.server.ip,
+        port: configs.server.port,
+        path: '/api/product_item/' + uuid + '?state=IN'
+    };
+
+    console.log(options);
+
+
+    var request = require('sync-request');
+    var res = request('GET', 'http://' + options.host + ':'+ options.port + '/' + options.path);
+    if (res.statusCode !== 200) {
+        console.log("not found");
+        return true;
+    } else {
+        console.log("found");
+        return false;
+    }
+}
+
 
 //#A starts and stops the plugin, should be accessible from other Node.js files so we export them
 //#B require and connect the actual hardware driver and configure it
