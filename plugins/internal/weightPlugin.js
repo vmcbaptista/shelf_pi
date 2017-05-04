@@ -1,4 +1,5 @@
 var resources = require('./../../resources/model');
+var configs = require('./../../configs/configs');
 var beaconsPlugin = require('./../../plugins/internal/beaconsPlugin');
 var median = require('median');
 
@@ -45,30 +46,38 @@ exports.stop = function () { //#A
 };
 
 function connectHardware() { //#B
-        if (!portWeight.isOpen()) {
-            portWeight.open()
-        }
-        portWeight.on('data', function (data) {
-            if (!isNaN(parseFloat(data))) {
-                val = parseFloat(data);
-                console.log(val);
-                bufferToMedian.push(val);
-                console.log(bufferToMedian);
-                if (bufferToMedian.length === 5) {
-                    copyArray = bufferToMedian.slice();
-                    val = median(copyArray);
-                    if (val < 0) {
-                        val = 0;
-                    }
-                    model.value = val;
-                    actualWeight = val;
-                    console.log("Peso e: " + val);
-                    checkThreshold();
-                    showValue();
-                    bufferToMedian.shift();
-                }
+    if (!portWeight.isOpen()) {
+        portWeight.open()
+    }
+    portWeight.on('data', function (data) {
+        if (String(data).match(/\*[+-]?([0-9]*[.])?[0-9]+\#/g)) {
+            val = parseFloat(String(data).substring(1,String(data).length - 1));
+            //bufferToMedian.push(val);
+            //console.log(bufferToMedian);
+            /*if (bufferToMedian.length === 5) {
+             copyArray = bufferToMedian.slice();
+             val = median(copyArray);
+             if (val < 0) {
+             val = 0;
+             }
+             model.value = val;
+             actualWeight = val;
+             console.log("Peso e: " + val);
+             checkThreshold();
+             showValue();
+             bufferToMedian.shift();
+             }*/
+            if (val < 0) {
+                val = 0;
             }
-        });
+            model.value = val;
+            actualWeight = val;
+            postWeightData();
+            console.log("Peso e: " + val);
+            checkThreshold();
+            showValue();
+        }
+    });
 }
 
 function simulate() { //#E
@@ -94,6 +103,36 @@ function checkThreshold() {
         exports.weightBuffer.push(dif);
     }
     previousWeight = actualWeight;
+}
+
+function postWeightData() {
+
+    var post_data = {
+        "device_id": resources.pi.id,
+        "timestamp": Date.now()/1000,
+        "weight": model.value
+    };
+
+    var options = {
+        host: configs.server.ip,
+        port: configs.server.port,
+        path: '/api/sensors/weight',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    };
+    // Set up the request
+    var post_req = http.request(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+            console.log('Response: ' + chunk);
+        });
+    });
+    // post the data
+    console.log(JSON.stringify(post_data));
+    post_req.write(JSON.stringify(post_data));
+    post_req.end();
 }
 
 

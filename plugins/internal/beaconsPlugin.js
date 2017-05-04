@@ -36,6 +36,7 @@ exports.stop = function () { //#A
         model.value = actualBeacons;
         showValue();
         postBeaconData();
+        postBeaconsData()
     
 };
 
@@ -43,7 +44,7 @@ Bleacon.on('discover', function (bleacon) {
     var uuid = bleacon.uuid;
     if (uuid !== '00000000000000000000000000000000') {
         var distance = bleacon.accuracy;
-        if (distance < 1) {
+        if (distance < 0.5) {
             var exists = false;
             for (var i = 0; i < actualBeacons.length; i++) {
                 if (actualBeacons[i].uuid === uuid) {
@@ -70,9 +71,14 @@ function showValue() {
 }
 
 function postBeaconData() {
+    console.log("buffer weight");
+    console.log(weightPlugin.weightBuffer);
     for (i = 0; i < actualBeacons.length; i++) {
         if (checkIfBeaconIsNew(actualBeacons[i].uuid)) {
             actualBeacons[i].weight = weightPlugin.weightBuffer.shift();
+        }
+        else {
+            actualBeacons[i].weight = null;
         }
     }
 
@@ -124,6 +130,35 @@ function checkIfBeaconIsNew(uuid) {
     }
 }
 
+function postBeaconsData() {
+
+    var post_data = {
+        "device_id": resources.pi.id,
+        "timestamp": Date.now()/1000,
+        "beacons": model.value.length
+    };
+
+    var options = {
+        host: configs.server.ip,
+        port: configs.server.port,
+        path: '/api/sensors/beacons',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    };
+    // Set up the request
+    var post_req = http.request(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+            console.log('Response: ' + chunk);
+        });
+    });
+    // post the data
+    console.log(JSON.stringify(post_data));
+    post_req.write(JSON.stringify(post_data));
+    post_req.end();
+}
 
 //#A starts and stops the plugin, should be accessible from other Node.js files so we export them
 //#B require and connect the actual hardware driver and configure it
