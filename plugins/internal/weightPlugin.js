@@ -16,6 +16,7 @@ var started = false;
 var actualWeight = 0;
 var previousWeight = 0;
 exports.weightBuffer = [];
+exports.removedDifferences = [];
 var THRESHOLD = 0.100;
 
 
@@ -25,6 +26,8 @@ var portWeight = new SerialPort("/dev/ttyACM1", {
 
 exports.start = function (params) { //#A
     if (!started) {
+        exports.removedDifferences = [];
+        exports.weightBuffer = [];
         started = true;
         if (params) {
             simulate();
@@ -52,21 +55,6 @@ function connectHardware() { //#B
     portWeight.on('data', function (data) {
         if (String(data).match(/\*[+-]?([0-9]*[.])?[0-9]+\#/g)) {
             val = parseFloat(String(data).substring(1,String(data).length - 1));
-            //bufferToMedian.push(val);
-            //console.log(bufferToMedian);
-            /*if (bufferToMedian.length === 5) {
-             copyArray = bufferToMedian.slice();
-             val = median(copyArray);
-             if (val < 0) {
-             val = 0;
-             }
-             model.value = val;
-             actualWeight = val;
-             console.log("Peso e: " + val);
-             checkThreshold();
-             showValue();
-             bufferToMedian.shift();
-             }*/
             if (val < 0) {
                 val = 0;
             }
@@ -96,11 +84,12 @@ function showValue() {
 }
 
 function checkThreshold() {
-
     var dif = actualWeight - previousWeight;
     console.info(dif);
     if (dif > THRESHOLD) {
         exports.weightBuffer.push(dif);
+    } else if (dif < -THRESHOLD) {
+        exports.removedDifferences.push(dif);
     }
     previousWeight = actualWeight;
 }

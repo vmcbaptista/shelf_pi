@@ -16,12 +16,13 @@ var pluginName = resources.pi.sensors.beacons.name;
 var weightPlugin = require('./../../plugins/internal/weightPlugin');
 
 var actualBeacons = [];
+var beaconsAfterClosing = [];
 exports.reading = false;
+var afterClosing = false;
 
 exports.start = function (params) { //#A
-    console.log("########################START##########################")
-    console.log(exports.reading)
     if (!exports.reading) {
+        afterClosing = false;
         exports.reading = true;
         actualBeacons = [];
         console.info("Vou ler beacons");
@@ -30,24 +31,37 @@ exports.start = function (params) { //#A
 };
 
 exports.stop = function () { //#A
-    console.log("########################STOP##########################")
-
-        Bleacon.stopScanning();
-        model.value = actualBeacons;
+    Bleacon.stopScanning();
+    console.log(weightPlugin.removedDifferences);
+    if (weightPlugin.removedDifferences.length > 0) {
+        afterClosing = true;
+        beaconsAfterClosing = [];
+        Bleacon.startScanning(); // scan for any bleacons
+    }
+    else {
+        beaconsAfterClosing = actualBeacons;
+        model.value = beaconsAfterClosing;
         showValue();
         postBeaconData();
         postBeaconsData()
-    
+    }
+
 };
 
 Bleacon.on('discover', function (bleacon) {
     var uuid = bleacon.uuid;
+    if (afterClosing) {
+        console.log("Já fechei");
+        beaconsArray = beaconsAfterClosing;
+    }else {
+        beaconsArray = actualBeacons;
+    }
     if (uuid !== '00000000000000000000000000000000') {
         var distance = bleacon.accuracy;
         if (distance < 0.5) {
             var exists = false;
-            for (var i = 0; i < actualBeacons.length; i++) {
-                if (actualBeacons[i].uuid === uuid) {
+            for (var i = 0; i < beaconsArray.length; i++) {
+                if (beaconsArray[i].uuid === uuid) {
                     exists = true;
                 }
             }
@@ -55,12 +69,45 @@ Bleacon.on('discover', function (bleacon) {
                 console.info("New beacon");
                 console.info(weightPlugin.weightBuffer);
                 console.info(bleacon);
-                actualBeacons.push({
-                    "uuid": bleacon.uuid,
-                    "major": bleacon.major,
-                    "minor": bleacon.minor,
-                    "distance": bleacon.accuracy
-                });
+                if (weightPlugin.removedDifferences.length > 0) {
+                    console.log("Existem beacons a remover");
+                    console.log(beaconsAfterClosing.length);
+                    console.log(actualBeacons.length);
+                    console.log(weightPlugin.removedDifferences.length);
+                    if(beaconsAfterClosing.length < actualBeacons.length - weightPlugin.removedDifferences.length) {
+                        console.log("Este beacon manteve-se");
+                        beaconsAfterClosing.push({
+                            "uuid": bleacon.uuid,
+                            "major": bleacon.major,
+                            "minor": bleacon.minor,
+                            "distance": bleacon.accuracy
+                        });
+                        if(beaconsAfterClosing.length === actualBeacons.length - weightPlugin.removedDifferences.length) {
+                            console.log("Já descobri todos os beacons q tenho de manter e remover");
+                            Bleacon.stopScanning();
+                            model.value = beaconsAfterClosing;
+                            showValue();
+                            postBeaconData();
+                            postBeaconsData()
+                        }
+                    }
+                    else {
+                        console.log("Já descobri todos os beacons q tenho de manter e remover");
+                        Bleacon.stopScanning();
+                        model.value = beaconsAfterClosing;
+                        showValue();
+                        postBeaconData();
+                        postBeaconsData()
+                    }
+                }
+                else {
+                    actualBeacons.push({
+                        "uuid": bleacon.uuid,
+                        "major": bleacon.major,
+                        "minor": bleacon.minor,
+                        "distance": bleacon.accuracy
+                    });
+                }
             }
         }
     }
@@ -73,18 +120,59 @@ function showValue() {
 function postBeaconData() {
     console.log("buffer weight");
     console.log(weightPlugin.weightBuffer);
-    for (i = 0; i < actualBeacons.length; i++) {
-        if (checkIfBeaconIsNew(actualBeacons[i].uuid)) {
-            actualBeacons[i].weight = weightPlugin.weightBuffer.shift();
+    console.log(beaconsAfterClosing);
+
+    beaconsAfterClosing.forEach(function(result, index) {
+        if (checkIfBeaconIsNew(result.uuid)) {
+            var removedItem =  weightPlugin.weightBuffer.shift();
+
+            if(removedItem !== undefined){
+                console.log("não vou remover");
+                result.weight = removedItem;
+            }else{
+                console.log("vou remover");
+                beaconsAfterClosing.splice(index,1);
+                console.log(beaconsAfterClosing);
+            }
         }
         else {
-            actualBeacons[i].weight = null;
+            result.weight = null;
         }
-    }
+    });
+
+
+    /*
+
+
+     if(result[property] === value) {
+     removedItems = array.splice(index, 1);
+     }
+     }
+
+
+     for (i = 0; i < actualBeacons.length; i++) {
+     console.log(actualBeacons[i]);
+     if (checkIfBeaconIsNew(actualBeacons[i].uuid)) {
+     var removedItem =  weightPlugin.weightBuffer.shift();
+     console.log("removed " + removedItem);
+     if(removedItem !== undefined){
+     console.log("não vou remover")
+     actualBeacons[i].weight = removedItem;
+     }else{
+     console.log("vou remover")
+     actualBeacons.splice(i,1);
+     console.log(actualBeacons);
+     }
+     }
+     else {
+     actualBeacons[i].weight = null;
+     }
+     }*/
+    console.log(beaconsAfterClosing);
 
     var post_data = {
         "device_id": resources.pi.id,
-        "beacons": JSON.stringify(actualBeacons)
+        "beacons": JSON.stringify(beaconsAfterClosing)
     };
     console.log(post_data);
     var options = {
