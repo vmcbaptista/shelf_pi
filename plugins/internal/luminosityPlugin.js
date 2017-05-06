@@ -24,17 +24,17 @@ exports.start = function (params) { //#A
             if (parseInt(data)) {
                 model.value = parseInt(data);
                 postLuminosityData();
-                showValue();
+                //showValue();
             }
             if (String(data).match(/.*Opened.*/g)) {
                 weightPlugin.start(); // When door is open start weight measure.
-                beaconsPlugin.start();
             }
             if (String(data).match(/.*Closed.*/g)) {
-                weightPlugin.stop(); // When door is CLOSED stop weight measure.
-                if(beaconsPlugin.reading) {        
-                    setTimeout(beaconsPlugin.stop, 30000);        
-                    beaconsPlugin.reading = false;
+                if(weightPlugin.reading) {
+                    weightPlugin.stop(); // When door is CLOSED stop weight measure.
+                }
+                if(beaconsPlugin.reading) {
+                    beaconsPlugin.stop();
                 }
             }
         });
@@ -74,7 +74,7 @@ function postLuminosityData() {
         });
     });
     // post the data
-    console.log(JSON.stringify(post_data));
+    //console.log(JSON.stringify(post_data));
     post_req.write(JSON.stringify(post_data));
     post_req.end();
 }

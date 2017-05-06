@@ -43,9 +43,10 @@ exports.stop = function () { //#A
         model.value = beaconsAfterClosing;
         showValue();
         postBeaconData();
-        postBeaconsData()
+        postBeaconsData();
+        console.log("##################################### VOZINHA A DIZER QUE JÀ PODE METER OUTRO ################################");
     }
-
+    exports.reading = false;
 };
 
 Bleacon.on('discover', function (bleacon) {
@@ -67,8 +68,6 @@ Bleacon.on('discover', function (bleacon) {
             }
             if (!exists) {
                 console.info("New beacon");
-                console.info(weightPlugin.weightBuffer);
-                console.info(bleacon);
                 if (weightPlugin.removedDifferences.length > 0) {
                     console.log("Existem beacons a remover");
                     console.log(beaconsAfterClosing.length);
@@ -107,6 +106,7 @@ Bleacon.on('discover', function (bleacon) {
                         "minor": bleacon.minor,
                         "distance": bleacon.accuracy
                     });
+                    exports.stop();
                 }
             }
         }
@@ -124,11 +124,9 @@ function postBeaconData() {
 
     beaconsAfterClosing.forEach(function(result, index) {
         if (checkIfBeaconIsNew(result.uuid)) {
-            var removedItem =  weightPlugin.weightBuffer.shift();
-
-            if(removedItem !== undefined){
+            if(weightPlugin.newProductWeight !== 0){
                 console.log("não vou remover");
-                result.weight = removedItem;
+                result.weight = weightPlugin.newProductWeight;
             }else{
                 console.log("vou remover");
                 beaconsAfterClosing.splice(index,1);
@@ -140,34 +138,6 @@ function postBeaconData() {
         }
     });
 
-
-    /*
-
-
-     if(result[property] === value) {
-     removedItems = array.splice(index, 1);
-     }
-     }
-
-
-     for (i = 0; i < actualBeacons.length; i++) {
-     console.log(actualBeacons[i]);
-     if (checkIfBeaconIsNew(actualBeacons[i].uuid)) {
-     var removedItem =  weightPlugin.weightBuffer.shift();
-     console.log("removed " + removedItem);
-     if(removedItem !== undefined){
-     console.log("não vou remover")
-     actualBeacons[i].weight = removedItem;
-     }else{
-     console.log("vou remover")
-     actualBeacons.splice(i,1);
-     console.log(actualBeacons);
-     }
-     }
-     else {
-     actualBeacons[i].weight = null;
-     }
-     }*/
     console.log(beaconsAfterClosing);
 
     var post_data = {

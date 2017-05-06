@@ -10,12 +10,11 @@ var interval, sensor;
 var model = resources.pi.sensors.weight;
 var pluginName = resources.pi.sensors.weight.name;
 var localParams = {'simulate': false, 'frequency': 2000};
-var bufferToMedian = [];
 
 var started = false;
 var actualWeight = 0;
 var previousWeight = 0;
-exports.weightBuffer = [];
+exports.newProductWeight = 0;
 exports.removedDifferences = [];
 var THRESHOLD = 0.100;
 
@@ -63,7 +62,7 @@ function connectHardware() { //#B
             postWeightData();
             console.log("Peso e: " + val);
             checkThreshold();
-            showValue();
+            //showValue();
         }
     });
 }
@@ -74,7 +73,7 @@ function simulate() { //#E
         model.value = val;
         actualWeight = val;
         checkThreshold();
-        showValue();
+        //showValue();
     }, localParams.frequency);
     console.info('Simulated %s sensor started!', pluginName);
 }
@@ -87,7 +86,9 @@ function checkThreshold() {
     var dif = actualWeight - previousWeight;
     console.info(dif);
     if (dif > THRESHOLD) {
-        exports.weightBuffer.push(dif);
+        console.log("Há um produto novo");
+        exports.newProductWeight = dif;
+        beaconsPlugin.start();
     } else if (dif < -THRESHOLD) {
         exports.removedDifferences.push(dif);
     }
