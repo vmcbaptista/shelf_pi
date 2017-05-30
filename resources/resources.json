@@ -2,18 +2,13 @@
   "pi": {
     "name": "Shelf",
     "description": "A shelf connected with Raspberry PI and Arduino using the WoT.",
-    "port": 8484,
+    "id": 0,
+    "socketport": 8484,
     "sensors": {  
       "luminosity": {
         "name": "Luminosity Sensor",
         "description": "A luminosity sensor inside the shelf.",
         "value": 0
-      },
-      "pressure": {
-        "name": "Pressure Sensor",
-        "description": "A pressure sensor above the shelf.",
-        "value": 0,
-        "unit": "g"
       },
       "weight": {
         "name": "Weight Sensor",
@@ -26,6 +21,10 @@
         "description": "Use Pi Bluetooth to read beacons neraby.",
         "value": "There is no beacons information right now"
       }
+    },
+    "server": {
+      "ip": "192.168.8.239",
+      "port": "8000"
     }
   }
 }

@@ -1,61 +1,230 @@
 /**
  * Created by vmcb on 12-04-2017.
  */
-var resources = require('./../../resources/model');
+
 var Bleacon = require('bleacon');
+var say = require('say');
+var http = require("http");
 
+exports.doorClosed = true;
 
-var interval, sensor;
-var model = resources.pi.sensors.beacons;
-var pluginName = resources.pi.sensors.beacons.name;
+var beaconsCount = [];
+var myMemory = [];
+var temporaryMemoryMissingBeacons=[];
+var deviceConfigs;
+var weightSensor;
 
-var actualBeacons = [];
-var reading = false;
+exports.start = function (params) {
+        if(myMemory.length === weightSensor.removedDifferences.length && exports.doorClosed){
+            myMemory = [];
+            weightSensor.removedDifferences.length=0;
+            exports.stop();
+        }else {
+            console.info("Reading Beacons - Started");
+            Bleacon.startScanning();
+        }
+};
 
-exports.start = function (params) { //#A
-    if (!reading) {
-        actualBeacons = [];
-        reading = true;
-        console.info("Vou ler beacons");
-        Bleacon.startScanning(); // scan for any bleacons
-        setTimeout(exports.stop, 60000);
+exports.stop = function () {
+    Bleacon.stopScanning();
+    beaconsCount.value = myMemory.length;
+    //showValue();
+    console.log("Sending Data to Server");
+    postBeaconData(deviceConfigs, myMemory);
+    postBeaconsData(deviceConfigs);
+};
+
+exports.getBeacons = function(device_configs) {
+    console.log("Setting Up Memory - Getting Beacons");
+    var options = {
+        host: device_configs.server.ip,
+        port: device_configs.server.port,
+        path: '/api/product_item/?state=IN'
+    };
+    var request = require('sync-request');
+    var res = request('GET', 'http://' + options.host + ':'+ options.port + '/' + options.path);
+    if (res.statusCode !== 200) {
+        return false;
+    } else {
+        console.log("Beacons Found.");
+        myMemory = JSON.parse(res.getBody());
+        return myMemory;
     }
 };
 
-exports.stop = function () { //#A
-    Bleacon.stopScanning();
-    model.value = actualBeacons;
-    showValue();
-    reading = false;
+exports.setUpMemory = function(device_configs,existingBeacons,weight_sensor){
+    myMemory = existingBeacons;
+    beaconsCount = device_configs.sensors.beacons;
+    deviceConfigs = device_configs;
+    weightSensor = weight_sensor;
 };
 
-Bleacon.on('discover', function (bleacon) {
-    var uuid = bleacon.uuid;
-    if (uuid !== '00000000000000000000000000000000') {
-        var distance = bleacon.accuracy;
-        if (distance < 1) {
-            var exists = false;
-            for (var i = 0; i < actualBeacons.length; i++) {
-                if (actualBeacons[i].uuid === uuid) {
-                    exists = true;
-                }
+/*
+ function showValue() {
+ console.info(model.value ? 'there is beacons data!' : 'not anymore!');
+ }*/
+
+function postBeaconData(deviceConfigs,myMemory) {
+    var post_data = {
+        "device_id": deviceConfigs.id,
+        "beacons": JSON.stringify(myMemory)
+    };
+    console.log(post_data);
+    var options = {
+        host: deviceConfigs.server.ip,
+        port: deviceConfigs.server.port,
+        path: '/api/sensors/data',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    };
+    // Set up the request
+    var post_req = http.request(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+            console.log('Response: ' + chunk);
+        });
+    });
+    // post the data
+    console.log(JSON.stringify(post_data));
+    post_req.write(JSON.stringify(post_data));
+    post_req.end();
+}
+
+function postBeaconsData(deviceConfigs) {
+
+    var post_data = {
+        "device_id": deviceConfigs.id,
+        "timestamp": Date.now()/1000,
+        "beacons": beaconsCount.value
+    };
+
+    var options = {
+        host: deviceConfigs.server.ip,
+        port: deviceConfigs.server.port,
+        path: '/api/sensors/beacons',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    };
+    // Set up the request
+    var post_req = http.request(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+            console.log('Response: ' + chunk);
+        });
+    });
+    // post the data
+    console.log(JSON.stringify(post_data));
+    post_req.write(JSON.stringify(post_data));
+    post_req.end();
+}
+
+function isBeaconNew(array, beacon) {
+    var isNew = false;
+    if (array.length === 0) {
+        newBeacon = {
+            uuid: beacon.uuid,
+            distance: beacon.accuracy,
+            major: beacon.major,
+            minor: beacon.minor,
+            weight: weightSensor.newProductWeight
+        };
+        array.push(newBeacon);
+        isNew = true;
+    }else {
+        var exists = false;
+        for (var i = 0; i < array.length; i++) {
+            if (beacon.uuid == array[i].uuid) {
+                exists = true;
             }
-            if (!exists) {
-                console.info("New beacon");
-                console.info(bleacon);
-                actualBeacons.push(bleacon)
+        }
+
+        if (!exists) {
+            newBeacon = {
+                uuid: beacon.uuid,
+                distance: beacon.accuracy,
+                major: beacon.major,
+                minor: beacon.minor,
+                weight: weightSensor.newProductWeight
+            };
+            array.push(newBeacon);
+            isNew = true;
+        }
+    }
+    return isNew;
+}
+
+function isBeaconRemoved(array, beacon){
+    var numberNegativeWeightVariations = weightSensor.removedDifferences.length;
+    if(numberNegativeWeightVariations > 0) {
+        var exists = false;
+        for (var i = 0; i < temporaryMemoryMissingBeacons.length; i++) {
+            if (beacon.uuid == temporaryMemoryMissingBeacons[i].uuid) {
+                exists = true;
+            }
+        }
+        if (!exists) {
+            existingBeacon  = {
+                uuid: beacon.uuid,
+                distance: beacon.accuracy,
+                major: beacon.major,
+                minor: beacon.minor
+                //weight: weightSensor.newProductWeight
+            };
+
+            temporaryMemoryMissingBeacons.push(existingBeacon);
+        }
+        console.log("My Memory Lenght " + myMemory.length);
+        console.log("Negative Vars " + numberNegativeWeightVariations);
+        console.log(" Temporary Memory " + temporaryMemoryMissingBeacons);
+
+        if(temporaryMemoryMissingBeacons.length ===  myMemory.length - numberNegativeWeightVariations){
+            console.log("Removing things");
+            temporaryMemoryMissingBeacons.forEach(function(resultTM,indexTM){
+                myMemory.forEach(function(resultMM,indexMM){
+                    if(resultTM.uuid == resultMM.uuid){
+                        resultTM.weight = resultMM.weight;
+                    }
+                });
+            });
+            myMemory = temporaryMemoryMissingBeacons.slice();
+            console.log("MyMemory after splice");
+            console.log(myMemory);
+            temporaryMemoryMissingBeacons = [];
+            console.log("Negative measures jumping to stop");
+            weightSensor.removedDifferences.length = 0;
+            exports.stop();
+        }
+    }else{
+        console.log("No negative measures jumping to stop");
+        exports.stop();
+    }
+
+}
+
+Bleacon.on('discover', function (bleacon) {
+    if (bleacon.uuid !== '00000000000000000000000000000000') {
+        if (bleacon.accuracy < 0.5) {
+            console.log("Checking if doot is closed");
+            if(!exports.doorClosed) {
+                console.log("Checking if Beacon Exists");
+                if (isBeaconNew(myMemory, bleacon)) {
+                    console.log("Time of detection is " + (Date.now() - weightSensor.newProductWeightTime) +"ms");
+                    console.log(myMemory);
+                    Bleacon.stopScanning();
+                    console.log("A new beacon was discovered." + bleacon.major);
+                    say.speak("Now you can add another product.");
+                }
+            }else {
+                    isBeaconRemoved(myMemory, bleacon);
             }
         }
     }
 });
 
-function showValue() {
-    console.info(model.value ? 'there is beacons data!' : 'not anymore!');
-}
-
-//#A starts and stops the plugin, should be accessible from other Node.js files so we export them
-//#B require and connect the actual hardware driver and configure it
-//#C configure the GPIO pin to which the PIR sensor is connected
-//#D start listening for GPIO events, the callback will be invoked on events
-//#E allows the plugin to be in simulation mode. This is very useful when developing or when you want to test your code on a device with no sensors connected, such as your laptop.
-
+exports.getMemory = function(){
+    return myMemory;
+};

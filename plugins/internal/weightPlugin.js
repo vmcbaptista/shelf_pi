@@ -1,60 +1,97 @@
-var resources = require('./../../resources/model');
+var beaconsPlugin = require('./../../plugins/internal/beaconsPlugin');
+var http = require("http");
+var say = require('say');
 
+exports.newProductWeight = 0;
+exports.removedDifferences = [];
+
+var THRESHOLD = 0.100;
+var started = false;
+var previousWeight = 0;
 SerialPort = require("serialport");
+var weightSensorPort = new SerialPort("/dev/ttyACM1", {
+    baudRate: 9600
+});
+var firstMeasure = true;
 
+exports.start = function (device_configs) {
+    if (!started) {
+        var weight_data = device_configs.sensors.weight;
+        exports.removedDifferences = [];
+        started = true;
 
-var interval, sensor;
-var model = resources.pi.sensors.weight;
-var pluginName = resources.pi.sensors.weight.name;
-var localParams = {'simulate': false, 'frequency': 2000};
+        if (!weightSensorPort.isOpen()) {
+            weightSensorPort.open()
+        }
 
-exports.start = function (params) { //#A
-  localParams = params;
-  if (localParams.simulate) {
-    simulate();
-  } else {
-    connectHardware();
-  }
-};
-
-exports.stop = function () { //#A
-  if (localParams.simulate) {
-    clearInterval(interval);
-  } else {
-      portWeight.close();
-  }
-};
-
-function connectHardware() { //#B
-    var portWeight = new SerialPort("/dev/ttyACM0", {
-        baudRate: 9600
-    });
-    portWeight.on("open", function () {
-        portLight.on('data', function (data) {
-            if (parseInt(data)) {
-                model.value = parseInt(data);
-                showValue();
+        weightSensorPort.on('data', function (sensor_raw_data) {
+            if (String(sensor_raw_data).match(/\*[+-]?([0-9]*[.])?[0-9]+\#/g)) {
+                sensor_data = parseFloat(String(sensor_raw_data).substring(1,String(sensor_raw_data).length - 1));
+                if (sensor_data < 0) {
+                    sensor_data = 0;
+                }
+                weight_data.value = sensor_data;
+                postWeightData(device_configs, weight_data);
+                console.log("The measured weight is: " + weight_data.value);
+                checkThreshold(weight_data.value);
+                //showValue();
             }
         });
+    }
+};
+
+exports.stop = function () {
+    if(started) {
+        weightSensorPort.close();
+        started = false;
+    }
+};
+
+function checkThreshold(actualWeight) {
+    var dif = actualWeight - previousWeight;
+    //console.info("The dif " + dif + " is higher than " + THRESHOLD);
+    //console.info(beaconsPlugin.getMemory());
+    if (dif > THRESHOLD) {
+        if(firstMeasure && beaconsPlugin.getMemory().length > 0) {
+            firstMeasure = false;
+            console.log("Ignoring First Measure");
+        }else {
+            firstMeasure = false;
+            exports.newProductWeight = dif;
+            exports.newProductWeightTime = Date.now();
+            beaconsPlugin.start();
+        }
+    } else if (dif < -THRESHOLD) {
+        exports.removedDifferences.push(dif);
+        say.speak("Please do not insert this product again. To do that you should close the door first");
+
+    }
+    previousWeight = actualWeight;
+}
+
+function postWeightData(device_configs, weight_data) {
+    var post_data = {
+        "device_id": device_configs.id,
+        "timestamp": Date.now()/1000,
+        "weight": weight_data.value
+    };
+    var options = {
+        host: device_configs.server.ip,
+        port: device_configs.server.port,
+        path: '/api/sensors/weight',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    };
+    var post_req = http.request(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+            console.log('Response: ' + chunk);
+        });
     });
-};
-
-function simulate() { //#E
-  interval = setInterval(function () {
-    model.value = Math.random() * 16000;
-    showValue();
-  }, localParams.frequency);
-  console.info('Simulated %s sensor started!', pluginName);
-};
-
-function showValue() {
-  console.info(model.value ? 'there is someone!' : 'not anymore!');
-};
-
-//#A starts and stops the plugin, should be accessible from other Node.js files so we export them
-//#B require and connect the actual hardware driver and configure it
-//#C configure the GPIO pin to which the PIR sensor is connected
-//#D start listening for GPIO events, the callback will be invoked on events
-//#E allows the plugin to be in simulation mode. This is very useful when developing or when you want to test your code on a device with no sensors connected, such as your laptop.
-
+    //console.log(JSON.stringify(post_data));
+    post_req.write(JSON.stringify(post_data));
+    post_req.end();
+}
 

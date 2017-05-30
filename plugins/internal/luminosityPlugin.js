@@ -1,43 +1,75 @@
 /**
  * Created by vmcb on 12-04-2017.
  */
-var resources = require('./../../resources/model');
-var beaconsPlugin = require('./../../plugins/internal/beaconsPlugin')
-
-var interval, sensor;
-var model = resources.pi.sensors.luminosity;
-var pluginName = resources.pi.sensors.luminosity.name;
+var http = require("http");
 
 SerialPort = require("serialport");
 
-var portLight = new SerialPort("/dev/ttyACM0", {
+var luminositySensorPort = new SerialPort("/dev/ttyACM0", {
     baudRate: 9600
 });
 
-exports.start = function (params) { //#A
-    portLight.on("open", function () {
-        portLight.on('data', function (data) {
+exports.start = function (device_configs, weightSensor,beaconSensor) {
+    console.log("Starting luminosity sensor readings");
+    var luminosity_data = device_configs.sensors.luminosity; //Reading Value from configs
+
+    luminositySensorPort.on("open", function () {
+        luminositySensorPort.on('data', function (data) {
             if (parseInt(data)) {
-                model.value = parseInt(data);
-                showValue();
+                luminosity_data.value = parseInt(data);
+                postLuminosityData(device_configs, luminosity_data);
+                //showValue();
+            }
+            if (String(data).match(/.*Opened.*/g)) {
+                weightSensor.start(device_configs); // When door is open start weight measure.
+                beaconSensor.doorClosed = false;
             }
             if (String(data).match(/.*Closed.*/g)) {
-                beaconsPlugin.start(); // When door is closed start beacons search
+                weightSensor.stop();
+                if(!beaconSensor.doorClosed) {
+                    beaconSensor.doorClosed = true;
+                    if(weightSensor.removedDifferences.length > 0) {
+                        beaconSensor.start();
+                    }else{
+                        beaconSensor.stop();
+                    }
+                    console.log("The door was closed.")
+                }
             }
         });
     });
 };
 
-exports.stop = function () { //#A
-    portLight.close();
+exports.stop = function () {
+    luminositySensorPort.close();
 };
 
+/*
 function showValue() {
     console.info(model.value ? 'there is luminosity data!' : 'not anymore!');
-}
+}*/
 
-//#A starts and stops the plugin, should be accessible from other Node.js files so we export them
-//#B require and connect the actual hardware driver and configure it
-//#C configure the GPIO pin to which the PIR sensor is connected
-//#D start listening for GPIO events, the callback will be invoked on events
-//#E allows the plugin to be in simulation mode. This is very useful when developing or when you want to test your code on a device with no sensors connected, such as your laptop.
+function postLuminosityData(device_configs, luminosity_data) {
+    var post_data = {
+        "device_id": device_configs.id,
+        "timestamp": Date.now()/1000,
+        "luminosity": luminosity_data.value
+    };
+    var options = {
+        host: device_configs.server.ip,
+        port: device_configs.server.port,
+        path: '/api/sensors/luminosity',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    };
+    var post_req = http.request(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+            console.log('Response: ' + chunk);
+        });
+    });
+    post_req.write(JSON.stringify(post_data));
+    post_req.end();
+}
