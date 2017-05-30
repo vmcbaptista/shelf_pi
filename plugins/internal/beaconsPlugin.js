@@ -212,6 +212,7 @@ Bleacon.on('discover', function (bleacon) {
             if(!exports.doorClosed) {
                 console.log("Checking if Beacon Exists");
                 if (isBeaconNew(myMemory, bleacon)) {
+                    console.log("Time of detection is " + (Date.now() - weightSensor.newProductWeightTime) +"ms");
                     console.log(myMemory);
                     Bleacon.stopScanning();
                     console.log("A new beacon was discovered." + bleacon.major);

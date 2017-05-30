@@ -58,6 +58,7 @@ function checkThreshold(actualWeight) {
         }else {
             firstMeasure = false;
             exports.newProductWeight = dif;
+            exports.newProductWeightTime = Date.now();
             beaconsPlugin.start();
         }
     } else if (dif < -THRESHOLD) {
