@@ -1,7 +1,6 @@
 /**
  * Created by vmcb on 12-04-2017.
  */
-
 var Bleacon = require('bleacon');
 var say = require('say');
 var http = require("http");
@@ -14,15 +13,20 @@ var temporaryMemoryMissingBeacons=[];
 var deviceConfigs;
 var weightSensor;
 
+var timeLeft = 30;
+var counter;
+
+
 exports.start = function (params) {
-        if(myMemory.length === weightSensor.removedDifferences.length && exports.doorClosed){
-            myMemory = [];
-            weightSensor.removedDifferences.length=0;
-            exports.stop();
-        }else {
-            console.info("Reading Beacons - Started");
-            Bleacon.startScanning();
-        }
+    if(myMemory.length === weightSensor.removedDifferences.length && exports.doorClosed){
+        myMemory = [];
+        weightSensor.removedDifferences.length=0;
+        exports.stop();
+    }else {
+        console.info("Reading Beacons - Started");
+        counter = setInterval(countdown, 1000);
+        Bleacon.startScanning();
+    }
 };
 
 exports.stop = function () {
@@ -63,6 +67,19 @@ exports.setUpMemory = function(device_configs,existingBeacons,weight_sensor){
  function showValue() {
  console.info(model.value ? 'there is beacons data!' : 'not anymore!');
  }*/
+
+function countdown() {
+    if (timeLeft == 0) {
+        timeLeft = 30;
+        clearTimeout(counter);
+        console.info("Failed to detect.");
+        say.speak("Failed to detect. Please remove the product and insert it again.");
+        Bleacon.stopScanning();
+    } else {
+        //console.info(timeLeft + ' seconds remaining');
+        timeLeft--;
+    }
+}
 
 function postBeaconData(deviceConfigs,myMemory) {
     var post_data = {
@@ -214,6 +231,8 @@ Bleacon.on('discover', function (bleacon) {
                 if (isBeaconNew(myMemory, bleacon)) {
                     console.log("Time of detection is " + (Date.now() - weightSensor.newProductWeightTime) +"ms");
                     console.log(myMemory);
+                    timeLeft = 30;
+                    clearInterval(counter);
                     Bleacon.stopScanning();
                     console.log("A new beacon was discovered." + bleacon.major);
                     say.speak("Now you can add another product.");

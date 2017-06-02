@@ -6,8 +6,11 @@ exports.newProductWeight = 0;
 exports.removedDifferences = [];
 
 var THRESHOLD = 0.100;
+var DIFFERENCE = 0.002;
+var TOLERANCE = 0.002;
 var started = false;
 var previousWeight = 0;
+var array = [];
 SerialPort = require("serialport");
 var weightSensorPort = new SerialPort("/dev/ttyACM1", {
     baudRate: 9600
@@ -33,7 +36,8 @@ exports.start = function (device_configs) {
                 weight_data.value = sensor_data;
                 postWeightData(device_configs, weight_data);
                 console.log("The measured weight is: " + weight_data.value);
-                checkThreshold(weight_data.value);
+                saveData(weight_data.value);
+                //checkThreshold(weight_data.value);
                 //showValue();
             }
         });
@@ -46,6 +50,21 @@ exports.stop = function () {
         started = false;
     }
 };
+
+function saveData(actualWeight) {
+    if(array.length > 5) array = [];
+    array.push(actualWeight);
+    var sum = 0;
+    for(var i=0;i<array.length;i++){
+        sum += array[i];
+    }
+    var mean = sum / array.length;
+    var dif = actualWeight - mean;
+    if(Math.abs(dif) < DIFFERENCE){
+        //console.info("The mean is " + mean + " and the actual weight is " + actualWeight);
+        checkThreshold(actualWeight);
+    }
+}
 
 function checkThreshold(actualWeight) {
     var dif = actualWeight - previousWeight;
@@ -62,9 +81,17 @@ function checkThreshold(actualWeight) {
             beaconsPlugin.start();
         }
     } else if (dif < -THRESHOLD) {
-        exports.removedDifferences.push(dif);
-        say.speak("Please do not insert this product again. To do that you should close the door first");
-
+        var temp = beaconsPlugin.getMemory();
+        for(var i = 0; i < temp.length; i++){
+            var pos = temp[i]["weight"] + TOLERANCE;
+            var neg = temp[i]["weight"] - TOLERANCE;
+            if(Math.abs(dif) < pos && Math.abs(dif) > neg){
+                console.info("Product removed");
+                exports.removedDifferences.push(dif);
+                say.speak("Please do not insert this product again. To do that you should close the door first");
+                break;
+            }
+        }
     }
     previousWeight = actualWeight;
 }
