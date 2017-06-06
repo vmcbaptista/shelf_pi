@@ -6,6 +6,7 @@ var say = require('say');
 var http = require("http");
 
 exports.doorClosed = true;
+exports.error = false;
 
 var beaconsCount = [];
 var myMemory = [];
@@ -73,6 +74,7 @@ function countdown() {
         timeLeft = 30;
         clearTimeout(counter);
         console.info("Failed to detect.");
+        exports.error = true;
         say.speak("Failed to detect. Please remove the product and insert it again.");
         Bleacon.stopScanning();
     } else {

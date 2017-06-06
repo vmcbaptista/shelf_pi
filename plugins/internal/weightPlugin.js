@@ -52,7 +52,7 @@ exports.stop = function () {
 };
 
 function saveData(actualWeight) {
-    if(array.length > 5) array = [];
+    if(array.length > 7) array = [];
     array.push(actualWeight);
     var sum = 0;
     for(var i=0;i<array.length;i++){
@@ -85,11 +85,16 @@ function checkThreshold(actualWeight) {
         for(var i = 0; i < temp.length; i++){
             var pos = temp[i]["weight"] + TOLERANCE;
             var neg = temp[i]["weight"] - TOLERANCE;
-            if(Math.abs(dif) < pos && Math.abs(dif) > neg){
-                console.info("Product removed");
-                exports.removedDifferences.push(dif);
-                say.speak("Please do not insert this product again. To do that you should close the door first");
-                break;
+            if(!beaconsPlugin.error) {
+                if (Math.abs(dif) < pos && Math.abs(dif) > neg) {
+                    console.info("Product removed");
+                    exports.removedDifferences.push(dif);
+                    say.speak("Please do not insert this product again. To do that you should close the door first");
+                    break;
+                }
+            }
+            else{
+                beaconsPlugin.error = false;
             }
         }
     }
